@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>售前专家赏金猎人展示</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>售前专家赏金猎人</h1>
+            <p class="subtitle">专业技术支持，助力销售成功</p>
+            
+            <div class="search-filter">
+                <input type="text" id="search-input" placeholder="搜索专家名称或技能...">
+                <select id="industry-filter">
+                    <option value="">所有行业</option>
+                    <option value="金融">金融</option>
+                    <option value="互联网">互联网</option>
+                    <option value="医疗">医疗</option>
+                    <option value="教育">教育</option>
+                    <option value="制造业">制造业</option>
+                    <option value="零售">零售</option>
+                    <option value="政府">政府</option>
+                    <option value="电信">电信</option>
+                    <option value="物流">物流</option>
+                    <option value="能源">能源</option>
+                    <option value="媒体">媒体</option>
+                    <option value="保险">保险</option>
+                </select>
+                <select id="skill-filter">
+                    <option value="">所有技能</option>
+                    <option value="方案设计">方案设计</option>
+                    <option value="需求分析">需求分析</option>
+                    <option value="产品演示">产品演示</option>
+                    <option value="POC实施">POC实施</option>
+                    <option value="项目管理">项目管理</option>
+                    <option value="技术规划">技术规划</option>
+                    <option value="竞品分析">竞品分析</option>
+                    <option value="价值咨询">价值咨询</option>
+                    <option value="系统集成">系统集成</option>
+                    <option value="定制开发">定制开发</option>
+                    <option value="产品培训">产品培训</option>
+                    <option value="故障排查">故障排查</option>
+                    <option value="性能优化">性能优化</option>
+                    <option value="安全方案">安全方案</option>
+                    <option value="用户体验">用户体验</option>
+                    <option value="行业分析">行业分析</option>
+                </select>
+                <select id="availability-filter">
+                    <option value="">所有状态</option>
+                    <option value="available">可用</option>
+                    <option value="busy">忙碌</option>
+                    <option value="unavailable">不可用</option>
+                </select>
+                <button id="refresh-btn" class="refresh-btn">刷新数据</button>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div id="loading-indicator" class="loading">
+            <svg width="50" height="50" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="20" fill="none" stroke="#2d53fe" stroke-width="5" stroke-dasharray="31.4 31.4">
+                    <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
+                </circle>
+            </svg>
+        </div>
+        
+        <div id="experts-container" class="experts-grid">
+            <!-- 专家卡片会通过JavaScript动态生成 -->
+        </div>
+        
+        <div class="pagination" id="pagination">
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn">4</button>
+        </div>
+    </div>
+    
+    <!-- 专家详情模态框 -->
+    <div id="expert-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="expert-detail-content">
+                <!-- 详情内容会通过JavaScript动态生成 -->
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>© 2025 售前专家赏金猎人平台 | 由Notion提供数据支持</p>
+    </footer>
+
+    <script src="scripts.js"></script>
+</body>
+</html>
