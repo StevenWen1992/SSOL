@@ -4,6 +4,13 @@ const { Client } = require('@notionhq/client');
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Notion-Version');
+  
+  // 处理预检请求
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
   
   const result = {
     timestamp: new Date().toISOString(),
@@ -33,15 +40,24 @@ module.exports = async (req, res) => {
   }
   
   try {
-    // 初始化Notion客户端
-    const notion = new Client({ auth: apiKey });
+    // 初始化Notion客户端，添加API版本
+    const notion = new Client({ 
+      auth: apiKey,
+      notionVersion: '2022-06-28' // 指定API版本
+    });
     
     // 步骤1: 测试API密钥(获取用户信息)
     try {
       result.steps.push({
         step: 'init_client',
         status: 'success',
-        details: { message: 'Notion客户端初始化成功' }
+        details: { 
+          message: 'Notion客户端初始化成功',
+          clientInfo: {
+            notionVersion: '2022-06-28',
+            hasAuthHeader: !!apiKey
+          }
+        }
       });
     } catch (error) {
       result.steps.push({
