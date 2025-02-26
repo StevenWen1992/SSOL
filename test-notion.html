@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion连接测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2d53fe;
+            text-align: center;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .step {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 5px solid #28a745;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-left: 5px solid #dc3545;
+        }
+        .info {
+            background-color: #e2f0fd;
+            border-left: 5px solid #17a2b8;
+        }
+        .checking {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+        }
+        button {
+            background-color: #2d53fe;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 20px auto;
+        }
+        button:hover {
+            background-color: #1a3dd9;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .summary {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 14px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <h1>Notion连接测试工具</h1>
+    
+    <div class="card">
+        <p>此工具可以帮助您诊断Notion API连接问题。点击下方按钮开始测试连接。</p>
+        <button id="test-btn">开始测试</button>
+    </div>
+    
+    <div id="results" class="card" style="display: none;">
+        <div class="summary" id="summary">正在测试连接...</div>
+        <div class="timestamp" id="timestamp"></div>
+        <div id="steps-container"></div>
+    </div>
+    
+    <script>
+        document.getElementById('test-btn').addEventListener('click', async function() {
+            const resultsDiv = document.getElementById('results');
+            const summaryDiv = document.getElementById('summary');
+            const timestampDiv = document.getElementById('timestamp');
+            const stepsContainer = document.getElementById('steps-container');
+            
+            resultsDiv.style.display = 'block';
+            summaryDiv.textContent = '正在测试连接...';
+            stepsContainer.innerHTML = '<div class="step checking">请稍候，正在进行测试...</div>';
+            
+            try {
+                const response = await fetch('/api/test-notion');
+                const data = await response.json();
+                
+                // 更新时间戳
+                timestampDiv.textContent = `测试时间: ${new Date(data.timestamp).toLocaleString()}`;
+                
+                // 更新摘要
+                if (data.status === 'success') {
+                    summaryDiv.textContent = '✅ 所有测试通过! Notion连接正常。';
+                    summaryDiv.style.color = '#28a745';
+                } else {
+                    summaryDiv.textContent = '❌ 测试失败: ' + (data.error || '出现未知问题');
+                    summaryDiv.style.color = '#dc3545';
+                }
+                
+                // 渲染步骤
+                stepsContainer.innerHTML = '';
+                data.steps.forEach(step => {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.className = `step ${step.status}`;
+                    
+                    let stepName = '';
+                    switch(step.step) {
+                        case 'check_env_vars':
+                            stepName = '环境变量检查';
+                            break;
+                        case 'init_client':
+                            stepName = 'Notion客户端初始化';
+                            break;
+                        case 'check_database':
+                            stepName = '数据库访问测试';
+                            break;
+                        case 'query_data':
+                            stepName = '数据查询测试';
+                            break;
+                        case 'check_properties':
+                            stepName = '数据库属性检查';
+                            break;
+                        default:
+                            stepName = step.step;
+                    }
+                    
+                    let statusIcon = '';
+                    switch(step.status) {
+                        case 'success':
+                            statusIcon = '✅';
+                            break;
+                        case 'error':
+                            statusIcon = '❌';
+                            break;
+                        case 'info':
+                            statusIcon = 'ℹ️';
+                            break;
+                        default:
+                            statusIcon = '⏳';
+                    }
+                    
+                    stepDiv.innerHTML = `
+                        <h3>${statusIcon} ${stepName}</h3>
+                        <pre>${JSON.stringify(step.details, null, 2)}</pre>
+                    `;
+                    
+                    stepsContainer.appendChild(stepDiv);
+                });
+                
+            } catch (error) {
+                summaryDiv.textContent = '❌ 连接测试失败';
+                summaryDiv.style.color = '#dc3545';
+                stepsContainer.innerHTML = `
+                    <div class="step error">
+                        <h3>❌ API调用错误</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
