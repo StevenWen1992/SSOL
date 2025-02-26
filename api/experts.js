@@ -10,7 +10,14 @@ const databaseId = process.env.NOTION_DATABASE_ID;
 module.exports = async (req, res) => {
   // 设置CORS头
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // 处理预检请求
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
   
   try {
     // 查询Notion数据库
@@ -40,6 +47,7 @@ module.exports = async (req, res) => {
             const projectsText = properties['项目经验']?.rich_text[0]?.plain_text || '[]';
             return JSON.parse(projectsText);
           } catch (e) {
+            console.error('解析项目经验数据出错:', e);
             return [];
           }
         })()
@@ -49,6 +57,6 @@ module.exports = async (req, res) => {
     res.status(200).json(experts);
   } catch (error) {
     console.error('获取Notion数据出错:', error);
-    res.status(500).json({ error: '获取数据失败' });
+    res.status(500).json({ error: '获取数据失败', details: error.message });
   }
 };
