@@ -1,0 +1,16 @@
+{
+  "name": "SSOL",
+  "version": "1.0.0",
+  "description": "售前专家能力晾晒系统",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.3"
+  },
+  "devDependencies": {
+    "vercel": "^28.0.0"
+  }
+}
