@@ -1,183 +1,110 @@
 // api/experts.js
-const { Client } = require('@notionhq/client');
+const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
-  console.log("=== API调用开始 ===");
-  console.log("请求方法:", req.method);
-  
   // 设置CORS头
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Notion-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
   // 处理预检请求
   if (req.method === 'OPTIONS') {
-    console.log("处理 OPTIONS 预检请求");
     res.status(200).end();
     return;
   }
   
-  // 验证环境变量
+  // 获取环境变量
   const apiKey = process.env.NOTION_API_KEY;
   const databaseId = process.env.NOTION_DATABASE_ID;
   
-  console.log("环境变量检查:");
-  console.log("- NOTION_API_KEY 存在:", !!apiKey);
-  console.log("- NOTION_API_KEY 长度:", apiKey ? apiKey.length : 0);
-  console.log("- NOTION_DATABASE_ID:", databaseId);
-  
   if (!apiKey || !databaseId) {
-    console.error("环境变量缺失");
-    return res.status(500).json({ 
-      error: '配置错误',
-      message: '缺少必要的环境变量',
-      missing: !apiKey ? 'NOTION_API_KEY' : 'NOTION_DATABASE_ID'
-    });
+    return res.status(500).json({ error: '环境变量缺失' });
   }
   
   try {
-    console.log("初始化Notion客户端...");
-    // 初始化Notion客户端，添加必要的请求头
-    const notion = new Client({ 
-      auth: apiKey,
-      notionVersion: '2022-06-28' // 添加API版本
+    // 直接向Notion API发送请求
+    const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
     });
     
-    // 查询Notion数据库
-    console.log("开始查询数据库...");
-    const response = await notion.databases.query({
-      database_id: databaseId,
-    });
-    
-    console.log("查询成功，获取到记录数:", response.results.length);
-    
-    if (response.results.length === 0) {
-      console.log("数据库中没有记录");
-      return res.status(200).json([]);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Notion API返回错误: ${response.status} - ${errorText}`);
     }
     
-    // 记录第一条记录的属性名，帮助调试
-    const firstResult = response.results[0];
-    console.log("第一条记录的属性名:", Object.keys(firstResult.properties).join(', '));
+    const data = await response.json();
     
-    // 处理响应数据
-    console.log("开始处理数据...");
-    const experts = response.results.map((page, index) => {
+    // 处理结果
+    const experts = data.results.map((page, index) => {
       const properties = page.properties;
-      try {
-        return {
-          id: index + 1,
-          name: getPropertyText(properties['姓名'], 'title', '未命名'),
-          title: getPropertyText(properties['职位'], 'rich_text', ''),
-          avatar: getPropertyUrl(properties['头像URL']) || '/api/placeholder/100/100',
-          skills: getPropertyMultiSelect(properties['技能']),
-          industries: getPropertyMultiSelect(properties['擅长行业']),
-          totalDeals: getPropertyNumber(properties['累计成交金额'], 0),
-          projectCount: getPropertyNumber(properties['项目数'], 0),
-          successRate: getPropertyNumber(properties['成功率'], 0),
-          availability: getPropertySelect(properties['状态'], 'unavailable'),
-          rating: getPropertyNumber(properties['评分'], 0),
-          contact: getPropertyText(properties['联系方式'], 'rich_text', ''),
-          projects: getPropertyProjects(properties['项目经验'])
-        };
-      } catch (err) {
-        console.error(`处理第${index+1}条记录时出错:`, err.message);
-        // 返回基本信息但记录错误
-        return {
-          id: index + 1,
-          name: getPropertyText(properties['姓名'], 'title', `记录 ${index+1}`),
-          error: err.message,
-          properties: Object.keys(properties)
-        };
-      }
+      
+      // 提取数据
+      return {
+        id: index + 1,
+        name: extractTitle(properties['姓名']),
+        title: extractRichText(properties['职位']),
+        avatar: extractUrl(properties['头像URL']),
+        skills: extractMultiSelect(properties['技能']),
+        industries: extractMultiSelect(properties['擅长行业']),
+        totalDeals: extractNumber(properties['累计成交金额']),
+        projectCount: extractNumber(properties['项目数']),
+        successRate: extractNumber(properties['成功率']),
+        availability: extractSelect(properties['状态']),
+        rating: extractNumber(properties['评分']),
+        contact: extractRichText(properties['联系方式']),
+        projects: extractProjects(properties['项目经验'])
+      };
     });
     
-    console.log("数据处理完成，返回专家数量:", experts.length);
     res.status(200).json(experts);
     
   } catch (error) {
-    console.error("获取Notion数据出错:", error);
-    res.status(500).json({ 
-      error: '获取数据失败', 
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
+    console.error('获取Notion数据失败:', error);
+    res.status(500).json({ error: error.message });
   }
-  
-  console.log("=== API调用结束 ===");
 };
 
-// 工具函数: 获取属性文本
-function getPropertyText(property, type, defaultValue = '') {
-  if (!property) return defaultValue;
-  
-  try {
-    if (type === 'title' && property.title && property.title.length > 0) {
-      return property.title[0].plain_text;
-    } else if (type === 'rich_text' && property.rich_text && property.rich_text.length > 0) {
-      return property.rich_text[0].plain_text;
-    }
-  } catch (e) {
-    console.warn(`读取${type}属性失败:`, e.message);
-  }
-  
-  return defaultValue;
+// 辅助函数
+function extractTitle(property) {
+  if (!property || !property.title || property.title.length === 0) return '未命名';
+  return property.title[0].plain_text;
 }
 
-// 工具函数: 获取URL属性
-function getPropertyUrl(property) {
-  if (!property) return null;
-  try {
-    return property.url;
-  } catch (e) {
-    console.warn('读取URL属性失败:', e.message);
-    return null;
-  }
+function extractRichText(property) {
+  if (!property || !property.rich_text || property.rich_text.length === 0) return '';
+  return property.rich_text[0].plain_text;
 }
 
-// 工具函数: 获取多选属性
-function getPropertyMultiSelect(property) {
+function extractUrl(property) {
+  if (!property || !property.url) return '/api/placeholder/100/100';
+  return property.url;
+}
+
+function extractMultiSelect(property) {
   if (!property || !property.multi_select) return [];
-  
-  try {
-    return property.multi_select.map(item => item.name);
-  } catch (e) {
-    console.warn('读取多选属性失败:', e.message);
-    return [];
-  }
+  return property.multi_select.map(item => item.name);
 }
 
-// 工具函数: 获取数字属性
-function getPropertyNumber(property, defaultValue = 0) {
-  if (!property) return defaultValue;
-  
-  try {
-    return property.number !== null && property.number !== undefined ? property.number : defaultValue;
-  } catch (e) {
-    console.warn('读取数字属性失败:', e.message);
-    return defaultValue;
-  }
+function extractNumber(property) {
+  if (!property || property.number === null || property.number === undefined) return 0;
+  return property.number;
 }
 
-// 工具函数: 获取选择属性
-function getPropertySelect(property, defaultValue = '') {
-  if (!property || !property.select) return defaultValue;
-  
-  try {
-    return property.select.name.toLowerCase();
-  } catch (e) {
-    console.warn('读取选择属性失败:', e.message);
-    return defaultValue;
-  }
+function extractSelect(property) {
+  if (!property || !property.select) return 'unavailable';
+  return property.select.name.toLowerCase();
 }
 
-// 工具函数: 解析项目经验JSON
-function getPropertyProjects(property) {
-  if (!property) return [];
-  
+function extractProjects(property) {
   try {
-    const projectsText = getPropertyText(property, 'rich_text', '[]');
+    const projectsText = extractRichText(property);
+    if (!projectsText) return [];
     return JSON.parse(projectsText);
   } catch (e) {
     console.warn('解析项目经验JSON失败:', e.message);
